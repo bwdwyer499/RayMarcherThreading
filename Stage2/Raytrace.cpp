@@ -15,13 +15,16 @@ It is free to use for educational purpose and cannot be redistributed outside of
 #include "ImageIO.h"
 #include "Distance.h"
 
-
+//GLOBAL VARIABLES
 // global pixel buffer for rendered image
 unsigned int buffer[MAX_WIDTH * MAX_HEIGHT];
-
+// ADDITION: The count of samples rendered  
+unsigned int samplesRendered = 0;
 // global scene file (used to simplify distance functions)
 Scene scene;
 
+//STRUCT
+//ADDITION : ThreadData struct to hold all the parameters necessary for running the render function
 typedef struct ThreadData {
 	Scene scene;						// The scene rendered
 	unsigned int threadID;				// Id of the thread
@@ -33,12 +36,14 @@ typedef struct ThreadData {
 	bool colourise;						// Bool to set the use of colourisation in image
 	unsigned int* outputStart;			// Pointer to a position to start writing samples
 	unsigned int* sharedMem;			// Pointer to a shared memory location
+
 }ThreadData;
 
 
 //ADDITION : outputStart (buffer) has been added to render parameters to specify where the output should start from.
 // render scene at given width and height and anti-aliasing level
-int render(Scene& scene, const int width, const int height, const int aaLevel, bool debugProgress, bool testMode, bool colourise, unsigned int* outputStart)
+int render(unsigned int* sharedMem, Scene& scene, const int width, const int height, const int aaLevel, bool debugProgress,
+	bool testMode, bool colourise, unsigned int* outputStart)
 {
 	// angle between each successive ray cast (per pixel, anti-aliasing uses a fraction of this)
 	const float dirStepSize = 1.0f / (0.5f * width / tanf(PIOVER180 * 0.5f * scene.cameraFieldOfView));
@@ -47,10 +52,11 @@ int render(Scene& scene, const int width, const int height, const int aaLevel, b
 	unsigned int* out = outputStart; //ADDITION : outputStart (buffer)
 
 	// count of samples rendered
-	unsigned int samplesRendered = 0;
+	//unsigned int samplesRendered = 0; // SUBTRACTION : samplesRendered is now global
 
 	// loop through all the pixels
-	for (int y = -height / 2; y < height / 2; ++y)
+	//for (int y = -height / 2; y < height / 2; ++y)
+	while (unsigned int y = InterlockedIncrement(sharedMem) < height)
 	{
 		// show where we're up to in the render at the start of each line
 		if (debugProgress) printf("%d/%d  \r", y + height / 2, height);
@@ -92,7 +98,7 @@ int render(Scene& scene, const int width, const int height, const int aaLevel, b
 				if (!colourise)
 				{
 					// store saturated final colour value in image buffer
-					*out++ = output.convertToPixel(scene.exposure);
+					out[y * width + x] = output.convertToPixel(scene.exposure);
 				}
 				else
 				{
@@ -122,26 +128,33 @@ DWORD __stdcall rayTraceThreadStart(LPVOID threadData) {
 	ThreadData* data = (ThreadData*)threadData;
 
 	//Pass in the parameter to render
-	render(data->scene, data->width, data->height, data->aaLevel, data->debugProgress,
+	render(data->sharedMem, data->scene, data->width, data->height, data->aaLevel, data->debugProgress,
 		data->testMode, data->colourise, data->outputStart);
 
 	ExitThread(NULL);
 }
 //ADDITION : 
-void genThreading(Scene& scene, const int width, const int height, const int aaLevel, bool colourise, unsigned int threads, unsigned int* out)
+void genThreading(Scene& scene, const int width, const int height, const int aaLevel, bool debugProgress, bool testMode, bool colourise, unsigned int threads, unsigned int* out)
 {
 	HANDLE* threadHandles = new HANDLE[threads];
 	ThreadData* threadData = new ThreadData[threads];
+
+	//ADDITION : declare a variable to act as shared memory for the threads
+	//ADDITION : this variable should represent one less than the number of lines done so far (because we are using InterlockedIncrement)
+	unsigned int sharedMem = UINT_MAX; //0xFFFFFFFF; //-1;
 
 	for (unsigned int i = 0; i < threads; i++) {
 
 		threadData[i].scene = scene;
 		threadData[i].threadID = i;
 		threadData[i].width = width;
-		threadData[i].height = height; // / threads;
+		threadData[i].height = height / threads;
 		threadData[i].aaLevel = aaLevel;
+		threadData[i].debugProgress = debugProgress;
+		threadData[i].testMode = testMode;
 		threadData[i].colourise = colourise;
-		threadData[i].outputStart = out + (long long unsigned int) i * (height / threads) * (long long unsigned int) width;
+		threadData[i].outputStart = out;// + (long long unsigned int) i * (height / threads) * (long long unsigned int) width;
+		threadData[i].sharedMem = &sharedMem;
 
 		//Create a thread and store the returned HANDLE
 		threadHandles[i] = CreateThread(NULL, 0, rayTraceThreadStart, &threadData[i], 0, NULL);
@@ -245,13 +258,12 @@ int main(int argc, char* argv[])
 
 	// total time taken to render all runs (used to calculate average)
 	int totalTime = 0;
-	int samplesRendered = 0;
+	//int samplesRendered = 0; // SUBTRACTION : samplesRendered is now global
 	for (int i = 0; i < times; i++)
 	{
 		Timer timer;																						// create timer
-		samplesRendered = samplesRendered + 1;
-		genThreading(scene, width, height, samples, colourise, threads, buffer);							// raytrace scene  //ADDITION: genThreading buffer
-		//render(scene, width, height, samples, debugProgress, testMode, colourise, buffer);				// raytrace scene 
+		genThreading(scene, width, height, samples, debugProgress, testMode, colourise, threads, buffer);							// raytrace scene  //ADDITION: genThreading buffer
+		//samplesRendered = render(scene, width, height, samples, debugProgress, testMode, colourise, buffer);				// raytrace scene
 		timer.end();																						// record end time
 		totalTime += timer.getMilliseconds();																// record total time taken
 	}
