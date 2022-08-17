@@ -56,6 +56,8 @@ int render(unsigned int* sharedMem, Scene& scene, const int width, const int hei
 	//for (int y = -height / 2; y < height / 2; ++y)
 	
 	unsigned int y = 0; //ADDITION : variable for shared mem
+
+	// output needs to be updated inside while loop. out needs to keep track of where we are.
 	
 	// loop through all the pixels //ADDITION While loop
 	while ((y = InterlockedIncrement(sharedMem)) < height)

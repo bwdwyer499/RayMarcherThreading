@@ -52,6 +52,8 @@ int render(Scene& scene, const int width, const int height, const int aaLevel, b
 	//unsigned int samplesRendered = 0; // SUBTRACTION : samplesRendered is now global
 
 	// loop through all the pixels
+	// tell the y a start y and and end y to render too!!!
+
 	for (int y = -height / 2; y < height / 2; ++y)
 	{
 		// show where we're up to in the render at the start of each line
@@ -94,6 +96,7 @@ int render(Scene& scene, const int width, const int height, const int aaLevel, b
 				if (!colourise)
 				{
 					// store saturated final colour value in image buffer
+					//ADDITION : The thread or threadcount??????
 					*out++ = output.convertToPixel(scene.exposure);
 				}
 				else
