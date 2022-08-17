@@ -102,7 +102,7 @@ int render(unsigned int* sharedMem, Scene& scene, const int width, const int hei
 				if (!colourise)
 				{
 					// store saturated final colour value in image buffer
-					//out[y * width + x] = output.convertToPixel(scene.exposure);
+					//out[y * width + x] = output.convertToPixel(scene.exposure); //This orgin is the centre so the x and y need to be worked out from that. 
 					*out++ = output.convertToPixel(scene.exposure);
 				}
 				else

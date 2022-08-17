@@ -35,12 +35,13 @@ typedef struct ThreadData{
 	bool testMode;						// Bool to set use of test mode
 	bool colourise;						// Bool to set the use of colourisation in image
 	unsigned int* outputStart;			// Pointer to a position to start writing samples
+	int yPosOffset;
 }ThreadData;
 
 
 //ADDITION : outputStart (buffer) has been added to render parameters to specify where the output should start from.
 // render scene at given width and height and anti-aliasing level
-int render(Scene& scene, const int width, const int height, const int aaLevel, bool debugProgress, bool testMode, bool colourise, unsigned int* outputStart)
+int render(Scene& scene, const int width, const int height, const int aaLevel, bool debugProgress, bool testMode, bool colourise, unsigned int* outputStart, int yPosOffset)
 {
 	// angle between each successive ray cast (per pixel, anti-aliasing uses a fraction of this)
 	const float dirStepSize = 1.0f / (0.5f * width / tanf(PIOVER180 * 0.5f * scene.cameraFieldOfView));
@@ -53,8 +54,7 @@ int render(Scene& scene, const int width, const int height, const int aaLevel, b
 
 	// loop through all the pixels
 	// tell the y a start y and and end y to render too!!!
-
-	for (int y = -height / 2; y < height / 2; ++y)
+	for (int y = (-height / 2) + yPosOffset; y < (height / 2) + yPosOffset; ++y)
 	{
 		// show where we're up to in the render at the start of each line
 		if (debugProgress) printf("%d/%d  \r", y + height / 2, height);
@@ -128,7 +128,7 @@ DWORD __stdcall rayTraceThreadStart(LPVOID threadData) {
 
 	//Pass in the parameter to render
 	render(data->scene, data->width, data->height, data->aaLevel, data->debugProgress,
-		data->testMode, data->colourise, data->outputStart);
+		data->testMode, data->colourise, data->outputStart,data->yPosOffset);
 
 	ExitThread(NULL);
 }
@@ -137,19 +137,19 @@ void genThreading(Scene& scene, const int width, const int height, const int aaL
 {
 	HANDLE* threadHandles = new HANDLE[threads];
 	ThreadData* threadData = new ThreadData[threads];
-
+	unsigned int threadHeight = (height / threads) - (height / threads) % 2; //The height of most threads.
 	for (unsigned int i = 0; i < threads; i++) {
 
 		threadData[i].scene = scene;
 		threadData[i].threadID = i;
 		threadData[i].width = width;
-		threadData[i].height = height / threads;
+		threadData[i].height = threadHeight;
 		threadData[i].aaLevel = aaLevel;
 		threadData[i].debugProgress = debugProgress;
 		threadData[i].testMode = testMode;
 		threadData[i].colourise = colourise;
-		threadData[i].outputStart = out + (long long unsigned int) i * (height / threads) * (long long unsigned int) width;
-
+		threadData[i].outputStart = out + (long long unsigned int) i * threadHeight * (long long unsigned int) width;
+		threadData[i].yPosOffset = threadHeight * (i - threads / 2);
 		//Create a thread and store the returned HANDLE
 		threadHandles[i] = CreateThread(NULL, 0, rayTraceThreadStart, &threadData[i], 0, NULL);
 	}
