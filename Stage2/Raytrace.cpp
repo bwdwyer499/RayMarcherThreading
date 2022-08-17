@@ -53,10 +53,12 @@ int render(unsigned int* sharedMem, Scene& scene, const int width, const int hei
 
 	// count of samples rendered
 	//unsigned int samplesRendered = 0; // SUBTRACTION : samplesRendered is now global
-
-	// loop through all the pixels
 	//for (int y = -height / 2; y < height / 2; ++y)
-	while (unsigned int y = InterlockedIncrement(sharedMem) < height)
+	
+	unsigned int y = 0; //ADDITION : variable for shared mem
+	
+	// loop through all the pixels //ADDITION While loop
+	while ((y = InterlockedIncrement(sharedMem)) < height)
 	{
 		// show where we're up to in the render at the start of each line
 		if (debugProgress) printf("%d/%d  \r", y + height / 2, height);
@@ -98,7 +100,8 @@ int render(unsigned int* sharedMem, Scene& scene, const int width, const int hei
 				if (!colourise)
 				{
 					// store saturated final colour value in image buffer
-					out[y * width + x] = output.convertToPixel(scene.exposure);
+					//out[y * width + x] = output.convertToPixel(scene.exposure);
+					*out++ = output.convertToPixel(scene.exposure);
 				}
 				else
 				{
@@ -157,7 +160,7 @@ void genThreading(Scene& scene, const int width, const int height, const int aaL
 		threadData[i].sharedMem = &sharedMem;
 
 		//Create a thread and store the returned HANDLE
-		threadHandles[i] = CreateThread(NULL, 0, rayTraceThreadStart, &threadData[i], 0, NULL);
+		threadHandles[i] = CreateThread(NULL, 0, rayTraceThreadStart, (void*) &threadData[i], 0, NULL);
 	}
 
 	//Wait for all the Threads to finish
