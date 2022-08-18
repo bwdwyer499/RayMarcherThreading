@@ -138,21 +138,35 @@ void genThreading(Scene& scene, const int width, const int height, const int aaL
 	HANDLE* threadHandles = new HANDLE[threads];
 	ThreadData* threadData = new ThreadData[threads];
 	unsigned int threadHeight = (height / threads) - (height / threads) % 2; //The height of most threads.
-	for (unsigned int i = 0; i < threads; i++) {
+	unsigned int oddLine = height - threadHeight * threads;
+	unsigned int threadID;
+	for (threadID = 0; threadID < threads -1; threadID++) {
 
-		threadData[i].scene = scene;
-		threadData[i].threadID = i;
-		threadData[i].width = width;
-		threadData[i].height = threadHeight;
-		threadData[i].aaLevel = aaLevel;
-		threadData[i].debugProgress = debugProgress;
-		threadData[i].testMode = testMode;
-		threadData[i].colourise = colourise;
-		threadData[i].outputStart = out + (long long unsigned int) i * threadHeight * (long long unsigned int) width;
-		threadData[i].yPosOffset = threadHeight * (i - threads / 2);
+		threadData[threadID].scene = scene;
+		threadData[threadID].threadID = threadID;
+		threadData[threadID].width = width;
+		threadData[threadID].height = threadHeight;
+		threadData[threadID].aaLevel = aaLevel;
+		threadData[threadID].debugProgress = debugProgress;
+		threadData[threadID].testMode = testMode;
+		threadData[threadID].colourise = colourise;
+		threadData[threadID].outputStart = out + (long long unsigned int) threadID * threadHeight * (long long unsigned int) width;
+		threadData[threadID].yPosOffset = threadHeight * (threadID - threads / 2.3f); //sqrt(5) is even better but I have no idea why. I just cannot get it centred 
 		//Create a thread and store the returned HANDLE
-		threadHandles[i] = CreateThread(NULL, 0, rayTraceThreadStart, &threadData[i], 0, NULL);
+		threadHandles[threadID] = CreateThread(NULL, 0, rayTraceThreadStart, &threadData[threadID], 0, NULL);
 	}
+	threadData[threadID].scene = scene;
+	threadData[threadID].threadID = threadID;
+	threadData[threadID].width = width;
+	threadData[threadID].height = threadHeight;
+	threadData[threadID].aaLevel = aaLevel;
+	threadData[threadID].debugProgress = debugProgress;
+	threadData[threadID].testMode = testMode;
+	threadData[threadID].colourise = colourise;
+	threadData[threadID].outputStart = out + (long long unsigned int) threadID * threadHeight * (long long unsigned int) width;
+	threadData[threadID].yPosOffset = threadHeight * (threadID - threads / 2.3f) + oddLine / 2.3f;
+	//Create a thread and store the returned HANDLE
+	threadHandles[threadID] = CreateThread(NULL, 0, rayTraceThreadStart, &threadData[threadID], 0, NULL);
 
 	//Wait for all the Threads to finish
 

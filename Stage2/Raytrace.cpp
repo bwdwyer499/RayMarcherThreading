@@ -55,13 +55,14 @@ int render(unsigned int* sharedMem, Scene& scene, const int width, const int hei
 	//unsigned int samplesRendered = 0; // SUBTRACTION : samplesRendered is now global
 	//for (int y = -height / 2; y < height / 2; ++y)
 	
-	unsigned int y = 0; //ADDITION : variable for shared mem
+	unsigned int line; //ADDITION : variable for shared mem
 
 	// output needs to be updated inside while loop. out needs to keep track of where we are.
 	
 	// loop through all the pixels //ADDITION While loop
-	while ((y = InterlockedIncrement(sharedMem)) < height)
+	while ((line = InterlockedIncrement(sharedMem)) < height)
 	{
+		int y = line - height / 2;
 		// show where we're up to in the render at the start of each line
 		if (debugProgress) printf("%d/%d  \r", y + height / 2, height);
 
@@ -103,7 +104,7 @@ int render(unsigned int* sharedMem, Scene& scene, const int width, const int hei
 				{
 					// store saturated final colour value in image buffer
 					//out[y * width + x] = output.convertToPixel(scene.exposure); //This orgin is the centre so the x and y need to be worked out from that. 
-					*out++ = output.convertToPixel(scene.exposure);
+					out[(x+width/2) + width * line] = output.convertToPixel(scene.exposure);
 				}
 				else
 				{
@@ -153,7 +154,7 @@ void genThreading(Scene& scene, const int width, const int height, const int aaL
 		threadData[i].scene = scene;
 		threadData[i].threadID = i;
 		threadData[i].width = width;
-		threadData[i].height = height / threads;
+		threadData[i].height = height;
 		threadData[i].aaLevel = aaLevel;
 		threadData[i].debugProgress = debugProgress;
 		threadData[i].testMode = testMode;
