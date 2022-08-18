@@ -25,7 +25,7 @@ Scene scene;
 
 //STRUCT
 //ADDITION : ThreadData struct to hold all the parameters necessary for running the render function
-typedef struct ThreadData{
+typedef struct ThreadData {
 	Scene scene;						// The scene rendered
 	unsigned int threadID;				// Id of the thread
 	unsigned int width;					// Amount of pixels in a row
@@ -57,7 +57,7 @@ int render(Scene& scene, const int width, const int height, const int aaLevel, b
 	for (int y = (-height / 2) + yPosOffset; y < (height / 2) + yPosOffset; ++y)
 	{
 		// show where we're up to in the render at the start of each line
-		if (debugProgress) printf("%d/%d  \r", y + height / 2, height);
+		if (debugProgress) printf("%d/%d  \r",(y - yPosOffset) + (height / 2), height);
 
 		for (int x = -width / 2; x < width / 2; ++x)
 		{
@@ -128,7 +128,7 @@ DWORD __stdcall rayTraceThreadStart(LPVOID threadData) {
 
 	//Pass in the parameter to render
 	render(data->scene, data->width, data->height, data->aaLevel, data->debugProgress,
-		data->testMode, data->colourise, data->outputStart,data->yPosOffset);
+		data->testMode, data->colourise, data->outputStart, data->yPosOffset);
 
 	ExitThread(NULL);
 }
@@ -140,7 +140,7 @@ void genThreading(Scene& scene, const int width, const int height, const int aaL
 	unsigned int threadHeight = (height / threads) - (height / threads) % 2; //The height of most threads.
 	unsigned int oddLine = height - threadHeight * threads;
 	unsigned int threadID;
-	for (threadID = 0; threadID < threads -1; threadID++) {
+	for (threadID = 0; threadID < threads - 1; threadID++) {
 
 		threadData[threadID].scene = scene;
 		threadData[threadID].threadID = threadID;
@@ -151,20 +151,20 @@ void genThreading(Scene& scene, const int width, const int height, const int aaL
 		threadData[threadID].testMode = testMode;
 		threadData[threadID].colourise = colourise;
 		threadData[threadID].outputStart = out + (long long unsigned int) threadID * threadHeight * (long long unsigned int) width;
-		threadData[threadID].yPosOffset = threadHeight * (threadID - threads / 2.3f); //sqrt(5) is even better but I have no idea why. I just cannot get it centred 
+		threadData[threadID].yPosOffset = threadHeight * (threadID - threads / 2); //sqrt(5) is even better but I have no idea why. I just cannot get it centred 
 		//Create a thread and store the returned HANDLE
 		threadHandles[threadID] = CreateThread(NULL, 0, rayTraceThreadStart, &threadData[threadID], 0, NULL);
 	}
 	threadData[threadID].scene = scene;
 	threadData[threadID].threadID = threadID;
 	threadData[threadID].width = width;
-	threadData[threadID].height = threadHeight;
+	threadData[threadID].height = threadHeight + oddLine;
 	threadData[threadID].aaLevel = aaLevel;
 	threadData[threadID].debugProgress = debugProgress;
 	threadData[threadID].testMode = testMode;
 	threadData[threadID].colourise = colourise;
 	threadData[threadID].outputStart = out + (long long unsigned int) threadID * threadHeight * (long long unsigned int) width;
-	threadData[threadID].yPosOffset = threadHeight * (threadID - threads / 2.3f) + oddLine / 2.3f;
+	threadData[threadID].yPosOffset = threadHeight * (threadID - threads / 2) + oddLine / 2;
 	//Create a thread and store the returned HANDLE
 	threadHandles[threadID] = CreateThread(NULL, 0, rayTraceThreadStart, &threadData[threadID], 0, NULL);
 
@@ -173,7 +173,7 @@ void genThreading(Scene& scene, const int width, const int height, const int aaL
 	for (unsigned int i = 0; i < threads; i++)
 	{
 		if (threadHandles[i] != 0) {
-			WaitForSingleObject(threadHandles[i], INFINITE);
+			WaitForMultipleObjects(threads,threadHandles,TRUE, INFINITE);
 		}
 	}
 

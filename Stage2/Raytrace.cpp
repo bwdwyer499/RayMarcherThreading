@@ -64,7 +64,7 @@ int render(unsigned int* sharedMem, Scene& scene, const int width, const int hei
 	{
 		int y = line - height / 2;
 		// show where we're up to in the render at the start of each line
-		if (debugProgress) printf("%d/%d  \r", y + height / 2, height);
+		if (debugProgress) printf("%d/%d  \r", y , height);
 
 		for (int x = -width / 2; x < width / 2; ++x)
 		{
