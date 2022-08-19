@@ -55,14 +55,14 @@ int render(unsigned int* sharedMem, Scene& scene, const int width, const int hei
 	//unsigned int samplesRendered = 0; // SUBTRACTION : samplesRendered is now global
 	//for (int y = -height / 2; y < height / 2; ++y)
 	
-	unsigned int line; //ADDITION : variable for shared mem
+	unsigned int currentLine; //ADDITION : variable for shared mem
 
 	// output needs to be updated inside while loop. out needs to keep track of where we are.
 	
 	// loop through all the pixels //ADDITION While loop
-	while ((line = InterlockedIncrement(sharedMem)) < height)
+	while ((currentLine = InterlockedIncrement(sharedMem)) < height)
 	{
-		int y = line - height / 2;
+		int y = currentLine - height / 2;
 		// show where we're up to in the render at the start of each line
 		if (debugProgress) printf("%d/%d  \r", y , height);
 
@@ -104,7 +104,7 @@ int render(unsigned int* sharedMem, Scene& scene, const int width, const int hei
 				{
 					// store saturated final colour value in image buffer
 					//out[y * width + x] = output.convertToPixel(scene.exposure); //This orgin is the centre so the x and y need to be worked out from that. 
-					out[(x+width/2) + width * line] = output.convertToPixel(scene.exposure);
+					out[(x+width/2) + width * currentLine] = output.convertToPixel(scene.exposure);
 				}
 				else
 				{
@@ -193,7 +193,7 @@ int main(int argc, char* argv[])
 	bool debugProgress = false;
 	bool testMode = false;
 	bool colourise = false;
-	unsigned int threads = 1;			// currently unused
+	unsigned int threads = 1;			
 	unsigned int blockSize = -1;		// currently unused
 
 	// default input / output filenames

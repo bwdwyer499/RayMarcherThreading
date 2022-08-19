@@ -132,16 +132,22 @@ DWORD __stdcall rayTraceThreadStart(LPVOID threadData) {
 
 	ExitThread(NULL);
 }
-//ADDITION : 
+//ADDITION : Function to handle the generation of the ThreadData object. Will make a call to start the render function passing in the ThreadData object.
 void genThreading(Scene& scene, const int width, const int height, const int aaLevel, bool debugProgress, bool testMode, bool colourise, unsigned int threads, unsigned int* out)
 {
 	HANDLE* threadHandles = new HANDLE[threads];
 	ThreadData* threadData = new ThreadData[threads];
-	unsigned int threadHeight = (height / threads) - (height / threads) % 2; //The height of most threads.
-	unsigned int oddLine = height - threadHeight * threads;
+	unsigned int threadHeight = (height / threads) - (height / threads) % 2;	//The height of most threads. Error here perhaps. 
+	unsigned int oddLine = height - threadHeight * threads;						// This plus the thread height should give the odd line heights
 	unsigned int threadID;
+	unsigned int yPosOffset = 0;
 	for (threadID = 0; threadID < threads - 1; threadID++) {
 
+		// initialise the corresponding ThreadData objects except:
+		
+		//Height - render the thread height of the image
+		//outputStart - results of the render need to be stored in a different value (place in memory) 
+		//YPosOffset - YposOff set used to tell the render where to start the next thread from
 		threadData[threadID].scene = scene;
 		threadData[threadID].threadID = threadID;
 		threadData[threadID].width = width;
@@ -151,10 +157,11 @@ void genThreading(Scene& scene, const int width, const int height, const int aaL
 		threadData[threadID].testMode = testMode;
 		threadData[threadID].colourise = colourise;
 		threadData[threadID].outputStart = out + (long long unsigned int) threadID * threadHeight * (long long unsigned int) width;
-		threadData[threadID].yPosOffset = threadHeight * (threadID - threads / 2); //sqrt(5) is even better but I have no idea why. I just cannot get it centred 
+		threadData[threadID].yPosOffset = threadHeight * (threadID - threads/ 2); //2.5/sqrt(5)/etc is even better but I have no idea why. That is not 100% working :(. I just cannot get it centred. Or prob is elsewhere yPosOffset + (threads + 0.5f) * threadHeight - 0.5f * threadHeight;
 		//Create a thread and store the returned HANDLE
 		threadHandles[threadID] = CreateThread(NULL, 0, rayTraceThreadStart, &threadData[threadID], 0, NULL);
 	}
+	//Same as above but a thread to handle odd lines.
 	threadData[threadID].scene = scene;
 	threadData[threadID].threadID = threadID;
 	threadData[threadID].width = width;
@@ -173,7 +180,7 @@ void genThreading(Scene& scene, const int width, const int height, const int aaL
 	for (unsigned int i = 0; i < threads; i++)
 	{
 		if (threadHandles[i] != 0) {
-			WaitForMultipleObjects(threads,threadHandles,TRUE, INFINITE);
+			WaitForSingleObject(threadHandles[i], INFINITE);
 		}
 	}
 
@@ -195,7 +202,7 @@ int main(int argc, char* argv[])
 	bool debugProgress = false;
 	bool testMode = false;
 	bool colourise = false;
-	unsigned int threads = 1;			// currently unused
+	unsigned int threads = 1;			
 	unsigned int blockSize = -1;		// currently unused
 
 	// default input / output filenames

@@ -64,7 +64,7 @@ int render(unsigned int* nextBlock, unsigned int blockSize, Scene& scene, const 
 		//ADDITION: calculate and store in a variable the current block y-coordinate
 		unsigned int by = currentBlock / blocksWide;
 
-		for (unsigned int iy = by * blockSize; iy < (by + 1) * blockSize; iy += 1)
+		for (unsigned int iy = by *blockSize; iy < (by + 1) * blockSize; iy += 1)
 		{
 			if (debugProgress) printf("%d/%d  \r", iy, height);
 
@@ -110,6 +110,7 @@ int render(unsigned int* nextBlock, unsigned int blockSize, Scene& scene, const 
 						
 						out[iy * width + ix] = output.convertToPixel(scene.exposure);
 						//out[by * width + bx] = output.convertToPixel(scene.exposure); //Block size is working.
+						
 						//*out++ = output.convertToPixel(scene.exposure);
 					}
 					else
@@ -152,7 +153,7 @@ void genThreading(Scene& scene, const int width, const int height, const int aaL
 	HANDLE* threadHandles = new HANDLE[threads];
 	ThreadData* threadData = new ThreadData[threads];
 
-	//ADDITION : declare a variable to act as shared memory for the threads
+	//ADDITION : declare a variable nextBlock to act as shared memory for the threads
 	//ADDITION : this variable should represent one less than the number of lines done so far (because we are using InterlockedIncrement)
 	unsigned int nextBlock = UINT_MAX; //0xFFFFFFFF; //-1;
 	for (unsigned int i = 0; i < threads; i++) {
@@ -166,7 +167,7 @@ void genThreading(Scene& scene, const int width, const int height, const int aaL
 		threadData[i].testMode = testMode;
 		threadData[i].colourise = colourise;
 		threadData[i].outputStart = out;
-		//ADDITION: set pointer to shared memory in ThreadData structure
+		//ADDITION: set pointer to shared memory for the next block in the ThreadData structure
 		threadData[i].nextBlock = &nextBlock;
 		//ADDITION: set the blockSize (to the local variable argument)
 		threadData[i].blockSize = blockSize;
@@ -202,8 +203,8 @@ int main(int argc, char* argv[])
 	bool debugProgress = false;
 	bool testMode = false;
 	bool colourise = false;
-	unsigned int threads = 1;			// currently unused
-	unsigned int blockSize = -1;		// currently unused
+	unsigned int threads = 1;			
+	unsigned int blockSize = -1;		
 
 	// default input / output filenames
 	const char* inputFilename = "Scenes/all.txt";
